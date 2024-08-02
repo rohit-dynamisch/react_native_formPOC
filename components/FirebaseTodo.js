@@ -4,12 +4,9 @@ import {
   Text,
   TextInput,
   Button,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { useSelector, useDispatch } from "react-redux";
-import { addTodo, removeTodo } from "../store copy/Actions/todoActions";
 import DraggableFlatList, {
   ScaleDecorator,
   ShadowDecorator,
@@ -17,17 +14,64 @@ import DraggableFlatList, {
   useOnCellActiveAnimation,
 } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
-const Todo = () => {
+import firestore from "@react-native-firebase/firestore";
+import PushNotification from "react-native-push-notification";
+import "./PushNotificationConfig";
+const FirebaseTodo = () => {
   const [todoText, setTodoText] = useState("");
-  const todos = useSelector((state) => state.todos.todos);
+  const todosRef = firestore().collection("Todos");
   const [data, setData] = useState([]);
-  const dispatch = useDispatch();
+  const [todos, setTodos] = useState([]);
+  const [update, setUpdate] = useState(null);
   const ref = useRef(null);
-  
+
+  async function addTodo() {
+    const newTodo = {
+      todo: todoText,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    };
+    let x = await todosRef.add(newTodo);
+    setTodoText("");
+    try {
+      PushNotification.localNotification({
+        channelId: "55",
+        title: "Todo Added",
+        message: "A new todo has been added successfully!",
+      });
+    } catch (error) {
+      console.error("Error adding todo:", error);
+    }
+  }
+
+  async function updateTodo() {
+    const newTodo = {
+      todo: todoText,
+      createdAt: update.createdAt,
+    };
+    await todosRef.doc(update.id).update(newTodo);
+    setTodoText("");
+    setUpdate(null);
+  }
+
+  const deleteTodo = async (id) => {
+    await todosRef.doc(id).delete();
+  };
+
   useEffect(() => {
-    setData(todos);
-  }, [todos]);
+    return todosRef.orderBy("createdAt", "asc").onSnapshot((querySnapshot) => {
+      const list = [];
+      querySnapshot.forEach((doc) => {
+        const { todo, createdAt } = doc.data();
+        list.push({
+          id: doc.id,
+          todo,
+          createdAt,
+        });
+      });
+
+      setTodos(list);
+    });
+  }, []);
 
   const renderItem = ({ item, index, drag, isActive }) => (
     <ScaleDecorator>
@@ -42,30 +86,20 @@ const Todo = () => {
           >
             <View style={styles.todos}>
               <Text>{index}</Text>
-              <Text style={styles.text}>{item.text}</Text>
+              <Text style={styles.text}>{item.todo}</Text>
               <Button
-                title="Remove"
-                onPress={() => handleRemoveTodo(item.id)}
+                title="Edit"
+                onPress={() => {
+                  setTodoText(item.todo), setUpdate(item);
+                }}
               />
+              <Button title="Remove" onPress={() => deleteTodo(item.id)} />
             </View>
           </TouchableOpacity>
         </ShadowDecorator>
       </OpacityDecorator>
     </ScaleDecorator>
   );
-
-  const handleAddTodo = () => {
-    const newTodo = {
-      id: Math.random().toString(),
-      text: todoText,
-    };
-    dispatch(addTodo(newTodo));
-    setTodoText("");
-  };
-
-  const handleRemoveTodo = (id) => {
-    dispatch(removeTodo(id));
-  };
 
   return (
     <View style={styles.container}>
@@ -75,13 +109,17 @@ const Todo = () => {
         value={todoText}
         onChangeText={setTodoText}
       />
-      <Button title="Add Todo" onPress={handleAddTodo} />
+      {update ? (
+        <Button title="Update Todo" onPress={updateTodo} />
+      ) : (
+        <Button title="Add Todo" onPress={addTodo} />
+      )}
       <GestureHandlerRootView style={styles.container}>
         <DraggableFlatList
           ref={ref}
-          data={data}
+          data={todos}
           keyExtractor={(item) => item.id}
-          onDragEnd={({ data }) => setData(data)}
+          onDragEnd={({ data }) => setTodos(data)}
           renderItem={renderItem}
         />
       </GestureHandlerRootView>
@@ -119,4 +157,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Todo;
+export default FirebaseTodo;

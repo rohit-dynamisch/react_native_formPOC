@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Form</string>
+    
+<string name="facebook_app_id">1204541134034796</string>
+<string name="fb_login_protocol_scheme">fb1234</string>
+<string name="facebook_client_token">b7184b4e408507f400a2f5eccce46e05</string>
+
+
 </resources>

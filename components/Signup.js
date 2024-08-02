@@ -2,7 +2,15 @@ import React, { useState, Component, useEffect } from "react";
 import * as Yup from "yup";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "react-native-image-picker";
-import { StyleSheet, Text, View, TextInput, Button, Image, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  Button,
+  Image,
+  ScrollView,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useDispatch, useSelector } from "react-redux";
@@ -21,7 +29,8 @@ function Signup({ navigation }) {
   const [show, setShow] = useState(false);
   const [date, setDate] = useState(new Date());
   const [mode, setMode] = useState("date");
-  const [secureTextEntry,setSecureTextEntry]=useState(true)
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
+  
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShow(Platform.OS === "ios");
@@ -41,30 +50,22 @@ function Signup({ navigation }) {
     email: Yup.string()
       .email("Email is Invalid")
       .required("Email Cannot Be Empty")
-      .when("checkEmail", {
-        is: true,
-        then: Yup.string()
-        .test({
-          message: () => "Email already exists",
-          test:  (values) => {
-            console.warn("vvvvvvvvvvv",values)
-            if (values) {
-              try {
-               let data = users.filter(item=>item.email == values)
-              //  console.warn(data.length);
-                if (data.length==0) {
-                  return true;
-                } else {
-                  return false;
-                }
-              } catch (error) {
-                console.log(error);
-              }
-            }
-          },
-        }),
-      })
-      ,
+      .test("email already exist", "Email already exist!", function (email) {
+        if (email) {
+          try {
+            let temp = users.filter((item) => item.email === email);
+            console.warn(temp);
+            return temp.length == 0;
+          } catch (err) {
+            console.log(err);
+          }
+          if (check?.data?.length > 0) {
+            return false;
+          }
+        }
+
+        return true;
+      }),
     password: Yup.string()
       .min(8, "Password Must have a Minimum of eight Characters")
       .required("Password Cannot Be Empty"),
@@ -72,17 +73,15 @@ function Signup({ navigation }) {
       .matches(/^[A-Za-z ]*$/, "Please enter valid name")
       .max(40)
       .required("Name is required!"),
-    image: Yup.mixed()
-      .required("Profile photo is required")
-      // .test("fileType", "Unsupported File Format", (value) => {
-      //   return (
-      //     value && (value.type === "image/jpeg" || value.type === "image/png")
-      //   );
-      // })
-      // .test("fileSize", "File Size is too large", (value) => {
-      //   return value && value.size <= 500 * 1024; // 500 KB
-      // })
-      ,
+    image: Yup.mixed().required("Profile photo is required"),
+    // .test("fileType", "Unsupported File Format", (value) => {
+    //   return (
+    //     value && (value.type === "image/jpeg" || value.type === "image/png")
+    //   );
+    // })
+    // .test("fileSize", "File Size is too large", (value) => {
+    //   return value && value.size <= 500 * 1024; // 500 KB
+    // })
   });
 
   const handleSubmit = async () => {
@@ -98,7 +97,7 @@ function Signup({ navigation }) {
       );
       dispatch(signup({ name, email, password, image: imageUri }));
       setErrors({});
-      navigation.navigate('Login')
+      navigation.navigate("Login");
     } catch (err) {
       const newErr = err.inner.reduce((acc, error) => {
         acc[error.path] = error.message;
@@ -113,7 +112,7 @@ function Signup({ navigation }) {
     setEmail("");
     setPassword("");
     setImageUri("");
-    setErrors({})
+    setErrors({});
   };
 
   const openImagePicker = () => {
@@ -138,89 +137,110 @@ function Signup({ navigation }) {
     });
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     console.warn(users);
-  },[])
+  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-    <View style={styles.mainContainer}>
-      <Text style={styles.title}>SIGNUP</Text>
+      <View style={styles.mainContainer}>
+        <Text style={styles.title}>SIGNUP</Text>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          value={name}
-          onChangeText={setName}
-        />
-        {errors.name && <Text style={styles.error}>{errors.name}</Text>}
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          keyboardType="email-address"
-          onChangeText={setEmail}
-        />
-        {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Password</Text>
-        <View style={{display:"flex",flexDirection:'row',backgroundColor:'white',alignItems:'center', borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.3)',borderRadius:5,borderColor:"#ddd"}}>
-        <TextInput
-        style={{width:"90%"}}
-          placeholder="Password"
-          secureTextEntry={secureTextEntry}
-          value={password}
-          onChangeText={setPassword}
-        />
-        <Icon
-          name={!secureTextEntry ? 'eye-slash' : 'eye'}
-          size={25}
-          color="gray"
-          onPress={()=>setSecureTextEntry(!secureTextEntry)}
-        />
-        </View>
-        {errors.password && <Text style={styles.error}>{errors.password}</Text>}
-      </View>
-
-      <View style={styles.datePickerContainer}>
-        <Text style={styles.label}>Selected Date of Birth:</Text>
-        <Text style={styles.dateText}>{date.toDateString()}</Text>
-        <View style={styles.buttonContainer}>
-          <Button onPress={() => showMode("date")} title="Select Date" color="#1E90FF" />
-        </View>
-        {show && (
-          <DateTimePicker
-            value={date}
-            mode={mode}
-            onChange={onChange}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Name"
+            value={name}
+            onChangeText={setName}
           />
-        )}
-      </View>
+          {errors.name && <Text style={styles.error}>{errors.name}</Text>}
+        </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Upload Profile Photo</Text>
-        <Button title="Choose from Device" onPress={openImagePicker} color="#1E90FF" />
-        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-        {errors.image && <Text style={styles.error}>{errors.image}</Text>}
-      </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            keyboardType="email-address"
+            onChangeText={setEmail}
+          />
+          {errors.email && <Text style={styles.error}>{errors.email}</Text>}
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <Buttons handleSubmit={handleSubmit} handleReset={handleReset} />
-      </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Password</Text>
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              backgroundColor: "white",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "rgba(0,0,0,0.3)",
+              borderRadius: 5,
+              borderColor: "#ddd",
+            }}
+          >
+            <TextInput
+              style={{ width: "90%" }}
+              placeholder="Password"
+              secureTextEntry={secureTextEntry}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Icon
+              name={!secureTextEntry ? "eye-slash" : "eye"}
+              size={25}
+              color="gray"
+              onPress={() => setSecureTextEntry(!secureTextEntry)}
+            />
+          </View>
+          {errors.password && (
+            <Text style={styles.error}>{errors.password}</Text>
+          )}
+        </View>
 
-      <TouchableOpacity style={styles.link} onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.linkText}>Already have an Account? Click here to LOGIN</Text>
-      </TouchableOpacity>
-    </View>
+        <View style={styles.datePickerContainer}>
+          <Text style={styles.label}>Selected Date of Birth:</Text>
+          <Text style={styles.dateText}>{date.toDateString()}</Text>
+          <View style={styles.buttonContainer}>
+            <Button
+              onPress={() => showMode("date")}
+              title="Select Date"
+              color="#1E90FF"
+            />
+          </View>
+          {show && (
+            <DateTimePicker value={date} mode={mode} onChange={onChange} />
+          )}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Upload Profile Photo</Text>
+          <Button
+            title="Choose from Device"
+            onPress={openImagePicker}
+            color="#1E90FF"
+          />
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          {errors.image && <Text style={styles.error}>{errors.image}</Text>}
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <Buttons handleSubmit={handleSubmit} handleReset={handleReset} />
+        </View>
+
+        <TouchableOpacity
+          style={styles.link}
+          onPress={() => navigation.navigate("Login")}
+        >
+          <Text style={styles.linkText}>
+            Already have an Account? Click here to LOGIN
+          </Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -251,7 +271,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#f8f8f8",
     borderRadius: 10,
-    margin: 10
+    margin: 10,
   },
   title: {
     fontSize: 28,
@@ -314,10 +334,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   linkText: {
-    color: '#1E90FF',
+    color: "#1E90FF",
     fontSize: 16,
-    textAlign:'center'
-
+    textAlign: "center",
   },
 });
 

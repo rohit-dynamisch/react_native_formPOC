@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux';
 import { Text, View } from 'react-native';
 import DrawerComponent from './DrawerComponent';
 import Profile from './Profile';
+import FirebaseTodo from './FirebaseTodo';
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -16,7 +17,8 @@ export default function DrawerNavigator() {
   const auth=useSelector(state=>state.auth.auth);
   return (
     <Drawer.Navigator drawerContent={(props) => <DrawerComponent {...props}/>}>
-      <Drawer.Screen name="Todo" component={Todo} />
+      {/* <Drawer.Screen name="Todo" component={Todo} /> */}
+      <Drawer.Screen name="Todo" component={FirebaseTodo} />
       <Drawer.Screen name="Profile" component={Profile} />
       <Drawer.Screen name="Logout" component={Logout} />
     </Drawer.Navigator>
